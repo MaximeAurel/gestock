@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Role;
-use Illuminate\Http\Request;
 use App\Http\Requests\UserRequest;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -14,6 +14,21 @@ class UserController extends Controller
     {
         $users = User::with('role')->get();
         return view('users.index', compact('users'));
+    }
+
+    public function show(User $user)
+    {
+        $authUser = auth()->user();
+        $authRole = strtolower(trim($authUser?->role?->nom ?? ''));
+        $isAdmin = in_array($authRole, ['admin', 'administrateur'], true);
+
+        if (!$isAdmin && $authUser?->id !== $user->id) {
+            abort(403, 'Acces refuse');
+        }
+
+        $user->load('role');
+
+        return view('users.show', compact('user'));
     }
 
     public function create()
@@ -33,9 +48,9 @@ class UserController extends Controller
             ]);
 
             return redirect()->route('users.index')
-                ->with('success', 'Utilisateur créé avec succès !');
+                ->with('success', 'Utilisateur cree avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la création de l’utilisateur.');
+            return back()->with('error', 'Erreur lors de la creation de l\'utilisateur.');
         }
     }
 
@@ -56,9 +71,9 @@ class UserController extends Controller
             ]);
 
             return redirect()->route('users.index')
-                ->with('success', 'Utilisateur mis à jour avec succès !');
+                ->with('success', 'Utilisateur mis a jour avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la mise à jour de l’utilisateur.');
+            return back()->with('error', 'Erreur lors de la mise a jour de l\'utilisateur.');
         }
     }
 
@@ -67,14 +82,14 @@ class UserController extends Controller
         try {
             $user->delete();
             return redirect()->route('users.index')
-                ->with('success', 'Utilisateur supprimé avec succès !');
+                ->with('success', 'Utilisateur supprime avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la suppression de l’utilisateur.');
+            return back()->with('error', 'Erreur lors de la suppression de l\'utilisateur.');
         }
     }
 
     /**
-     * Changement de mot de passe spécifique
+     * Changement de mot de passe specifique
      */
     public function changerMotDePasse(Request $request, User $user)
     {
@@ -88,9 +103,9 @@ class UserController extends Controller
             ]);
 
             return redirect()->route('users.index')
-                ->with('success', 'Mot de passe mis à jour avec succès !');
+                ->with('success', 'Mot de passe mis a jour avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la mise à jour du mot de passe.');
+            return back()->with('error', 'Erreur lors de la mise a jour du mot de passe.');
         }
     }
 }

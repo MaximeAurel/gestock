@@ -97,6 +97,27 @@
     @media(max-width:992px){
         .auth-right{display:none;}
     }
+
+
+.toggle-password{
+    position:absolute;
+    top:50%;
+    right:15px;
+    transform:translateY(-50%);
+    cursor:pointer;
+    color:#6c757d;
+    font-size:18px;
+    transition:0.2s;
+}
+
+.toggle-password:hover{
+    color:#6366f1;
+}
+
+/* évite que le texte passe sous l'icône */
+#password{
+    padding-right:45px;
+}
 </style>
 
 </head>
@@ -183,9 +204,27 @@ Swal.fire({
 @endif
 
 <script>
+/* ===================================================== */
+/* AFFICHER / MASQUER MOT DE PASSE */
+/* Change aussi l'icône Bootstrap dynamiquement */
+/* ===================================================== */
+
 function togglePassword(){
-    const input=document.getElementById('password');
-    input.type=input.type==='password'?'text':'password';
+
+    const input = document.getElementById('password');
+    const icon = document.querySelector('.toggle-password');
+
+    if(input.type === "password"){
+        input.type = "text";
+        icon.classList.remove("bi-eye");
+        icon.classList.add("bi-eye-slash");
+    }
+    else{
+        input.type = "password";
+        icon.classList.remove("bi-eye-slash");
+        icon.classList.add("bi-eye");
+    }
+
 }
 </script>
 

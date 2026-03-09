@@ -1,6 +1,18 @@
 <!-- ===================================================== -->
 <!-- SIDEBAR -->
 <!-- ===================================================== -->
+
+@php
+    // =====================================================
+    // Récupération du rôle de l'utilisateur connecté
+    // Cela évite de répéter Auth::user() partout
+    // =====================================================
+    $role = strtolower(trim(Auth::user()?->role?->nom ?? ''));
+    $isAdmin = in_array($role, ['admin', 'administrateur'], true);
+    $isComptable = in_array($role, ['comptable', 'gestionnaire stock', 'gestionnaire de stock'], true);
+    $isVendeur = in_array($role, ['vendeur', 'commercial'], true);
+@endphp
+
 <aside id="sidebar" class="sidebar">
 
 <ul class="sidebar-nav" id="sidebar-nav">
@@ -8,7 +20,8 @@
 
     <!-- ===================================================== -->
     <!-- DASHBOARD -->
-    <!-- ===================================================== -->
+    <!-- Visible pour tous les rôles
+        ===================================================== -->
     <li class="nav-item">
         <a class="nav-link" href="{{ route('dashboard') }}">
             <i class="bi bi-grid"></i>
@@ -17,10 +30,12 @@
     </li>
 
 
+
     <!-- ===================================================== -->
     <!-- PRODUITS -->
-    <!-- Gestion des articles et du stock -->
-    <!-- ===================================================== -->
+    <!-- Visible seulement pour : Admin et Comptable
+        ===================================================== -->
+    @if($isAdmin || $isComptable)
     <li class="nav-item">
 
         <a class="nav-link collapsed"
@@ -76,13 +91,15 @@
         </ul>
 
     </li>
+    @endif
 
 
 
     <!-- ===================================================== -->
     <!-- ACHATS -->
-    <!-- Gestion des approvisionnements -->
-    <!-- ===================================================== -->
+    <!-- Visible pour : Admin et Comptable
+        ===================================================== -->
+    @if($isAdmin || $isComptable)
     <li class="nav-item">
 
         <a class="nav-link collapsed"
@@ -117,13 +134,15 @@
         </ul>
 
     </li>
+    @endif
 
 
 
     <!-- ===================================================== -->
     <!-- VENTES -->
-    <!-- Gestion commerciale -->
-    <!-- ===================================================== -->
+    <!-- Visible pour : Admin, Comptable et Vendeur
+        ===================================================== -->
+    @if($isAdmin || $isComptable || $isVendeur)
     <li class="nav-item">
 
         <a class="nav-link collapsed"
@@ -172,13 +191,14 @@
         </ul>
 
     </li>
+    @endif
 
 
 
     <!-- ===================================================== -->
     <!-- CLIENTS -->
-    <!-- Gestion de la clientèle -->
-    <!-- ===================================================== -->
+    <!-- Visible pour tous les rôles
+    ===================================================== -->
     <li class="nav-item">
         <a class="nav-link collapsed" href="{{ route('clients.index') }}">
             <i class="bi bi-people"></i>
@@ -190,42 +210,67 @@
 
     <!-- ===================================================== -->
     <!-- UTILISATEURS -->
-    <!-- Gestion des comptes utilisateurs -->
-    <!-- ===================================================== -->
+    <!-- Visible seulement pour Admin
+        ===================================================== -->
+    @if($isAdmin)
     <li class="nav-item">
         <a class="nav-link collapsed" href="{{ route('users.index') }}">
             <i class="bi bi-person"></i>
             <span>Utilisateurs</span>
         </a>
     </li>
+    @endif
 
 
 
     <!-- ===================================================== -->
     <!-- RAPPORTS -->
-    <!-- Statistiques -->
-    <!-- ===================================================== -->
+    <!-- Visible pour : Admin et Comptable
+        ===================================================== -->
+    @if($isAdmin || $isComptable)
     <li class="nav-item">
         <a class="nav-link collapsed" href="{{ route('rapports.index') }}">
             <i class="bi bi-bar-chart"></i>
             <span>Rapports</span>
         </a>
     </li>
+    @endif
 
 
 
     <!-- ===================================================== -->
     <!-- PARAMETRES -->
-    <!-- Configuration de l'application -->
-    <!-- ===================================================== -->
+    <!-- Visible seulement pour Admin
+        ===================================================== -->
+    @if($isAdmin)
     <li class="nav-item">
         <a class="nav-link collapsed" href="{{ route('parametres.index') }}">
             <i class="bi bi-gear"></i>
             <span>Paramètres</span>
         </a>
     </li>
+    @endif
+
+    <!-- ===================================================== -->
+    <!-- DECONNEXION -->
+    <!-- Utilise POST pour respecter la sécurité Laravel -->
+    <!-- ===================================================== -->
+    <li class="nav-item">
+
+        <form action="{{ route('logout') }}" method="POST">
+            @csrf
+
+            <button type="submit" class="nav-link collapsed border-0 bg-transparent w-100 text-start">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Déconnexion</span>
+            </button>
+        </form>
+
+    </li>
 
 
 </ul>
 
 </aside>
+
+
