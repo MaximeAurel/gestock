@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="pagetitle">
-    <h1>Parametres</h1>
+<div class="pagetitle fade-slide-up">
+    <h1>Paramètres</h1>
 </div>
-
-<section class="section">
+ 
+<section class="section fade-slide-up">
     <div class="card">
         <div class="card-body pt-3">
-            <h5 class="card-title">Parametres generaux</h5>
+            <h5 class="card-title">Paramètres généraux</h5>
 
             <form action="{{ route('parametres.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -49,3 +49,4 @@
     </div>
 </section>
 @endsection
+

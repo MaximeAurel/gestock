@@ -9,7 +9,8 @@ class Client extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nom','telephone','email','adresse','credit'];
+    // Autorise l'assignation de masse pour tous les champs de formulaire
+    protected $fillable = ['nom','telephone','email','adresse','ville','pays','credit'];
 
     public function factures()
     {

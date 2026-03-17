@@ -3,159 +3,120 @@
 namespace App\Services;
 
 use App\Models\Achat;
-use App\Models\LigneAchat;
 use Illuminate\Support\Facades\DB;
-use Exception;
 
 class AchatService
 {
-    protected StockService $stockService;
-
-    public function __construct(StockService $stockService)
-    {
-        $this->stockService = $stockService;
-    }
-
-    /**
-     * Création d'un achat avec ses lignes
-     */
+    // =============================
+    // Création d'un achat avec lignes
+    // =============================
     public function creer(array $data): Achat
     {
         return DB::transaction(function () use ($data) {
+            $numero = $data['numero'] ?? 'ACH-' . now()->format('Ymd-His');
 
+            // Création de l'achat
             $achat = Achat::create([
+                'numero'         => $numero,
                 'fournisseur_id' => $data['fournisseur_id'],
                 'date_achat'     => $data['date_achat'],
-                'reference'      => $data['reference'] ?? null,
-                'total_ht'       => 0,
-                'total_tva'      => 0,
+                'total_ht'       => 0,  // sera recalculé après création des lignes
                 'total_ttc'      => 0,
-                'statut'         => 'valide'
+                'statut'         => $data['statut'] ?? 'valide',
             ]);
 
-            $totalHT  = 0;
-            $totalTVA = 0;
+            $total_ht = 0;
+            $total_ttc = 0;
 
-            foreach ($data['lignes'] as $ligne)
-            {
-                $montantHT = $ligne['quantite'] * $ligne['prix_unitaire'];
-                $montantTVA = $montantHT * ($ligne['tva'] / 100);
+            // Création des lignes
+            if (isset($data['lignes']) && is_array($data['lignes'])) {
+                foreach ($data['lignes'] as $ligne) {
+                    $ligneAchat = $achat->lignes()->create([
+                        'produit_id'    => $ligne['produit_id'],
+                        'quantite'      => $ligne['quantite'],
+                        // On mappe vers les colonnes existantes prix/total
+                        'prix'          => $ligne['prix_unitaire'],
+                        'total'         => ($ligne['quantite'] * $ligne['prix_unitaire']) * (1 + ($ligne['tva'] ?? 0) / 100),
+                    ]);
 
-                LigneAchat::create([
-                    'achat_id'       => $achat->id,
-                    'produit_id'     => $ligne['produit_id'],
-                    'quantite'       => $ligne['quantite'],
-                    'prix_unitaire'  => $ligne['prix_unitaire'],
-                    'tva'            => $ligne['tva'],
-                    'total'          => $montantHT + $montantTVA
-                ]);
-
-                // 🔼 Entrée en stock
-                $this->stockService->entree(
-                    $ligne['produit_id'],
-                    $ligne['quantite'],
-                    "Achat #{$achat->id}"
-                );
-
-                $totalHT  += $montantHT;
-                $totalTVA += $montantTVA;
+                    $total_ht  += $ligneAchat->quantite * $ligneAchat->prix;
+                    $total_ttc += $ligneAchat->total;
+                }
             }
 
+            // Mise à jour des totaux
             $achat->update([
-                'total_ht'  => $totalHT,
-                'total_tva' => $totalTVA,
-                'total_ttc' => $totalHT + $totalTVA
+                'total_ht'  => $total_ht,
+                'total_ttc' => $total_ttc,
             ]);
 
             return $achat;
         });
     }
 
-    /**
-     * Mise à jour d'un achat
-     */
-    public function modifier(Achat $achat, array $data): Achat
+    // =============================
+    // Mise à jour d'un achat
+    // =============================
+    public function mettreAJour(int $achatId, array $data): Achat
     {
-        return DB::transaction(function () use ($achat, $data) {
+        return DB::transaction(function () use ($achatId, $data) {
+            $achat = Achat::findOrFail($achatId);
 
-            // 🔽 Annule le stock précédent
-            foreach ($achat->lignes as $ligne)
-            {
-                $this->stockService->sortie(
-                    $ligne->produit_id,
-                    $ligne->quantite,
-                    "Correction Achat #{$achat->id}"
-                );
-            }
-
-            // Supprime les anciennes lignes
-            $achat->lignes()->delete();
-
-            // Recréation
-            return $this->creer([
-                ...$data,
-                'fournisseur_id' => $achat->fournisseur_id,
-                'date_achat'     => $achat->date_achat,
+            // Mise à jour de l'achat
+            $achat->update([
+                'numero'         => $data['numero'] ?? $achat->numero,
+                'fournisseur_id' => $data['fournisseur_id'] ?? $achat->fournisseur_id,
+                'date_achat'     => $data['date_achat'] ?? $achat->date_achat,
+                'statut'         => $data['statut'] ?? $achat->statut,
             ]);
-        });
-    }
 
-    /**
-     * Annulation d'un achat
-     */
-    public function annuler(Achat $achat): void
-    {
-        DB::transaction(function () use ($achat) {
+            // Si des lignes sont fournies, on remplace et on recalcule les totaux
+            if (isset($data['lignes']) && is_array($data['lignes'])) {
+                $achat->lignes()->delete();
 
-            if ($achat->statut === 'annule')
-                throw new Exception("Achat déjà annulé");
+                $total_ht = 0;
+                $total_ttc = 0;
 
-            foreach ($achat->lignes as $ligne)
-            {
-                $this->stockService->sortie(
-                    $ligne->produit_id,
-                    $ligne->quantite,
-                    "Annulation Achat #{$achat->id}"
-                );
+                foreach ($data['lignes'] as $ligne) {
+                    $ligneAchat = $achat->lignes()->create([
+                        'produit_id'    => $ligne['produit_id'],
+                        'quantite'      => $ligne['quantite'],
+                        'prix'          => $ligne['prix_unitaire'],
+                        'total'         => ($ligne['quantite'] * $ligne['prix_unitaire']) * (1 + ($ligne['tva'] ?? 0) / 100),
+                    ]);
+
+                    $total_ht  += $ligneAchat->quantite * $ligneAchat->prix;
+                    $total_ttc += $ligneAchat->total;
+                }
+
+                $achat->update([
+                    'total_ht'  => $total_ht,
+                    'total_ttc' => $total_ttc,
+                ]);
             }
 
-            $achat->update(['statut' => 'annule']);
+            return $achat;
         });
     }
 
-    /**
-     * Suppression définitive
-     */
-    public function supprimer(Achat $achat): void
-    {
-        DB::transaction(function () use ($achat) {
-
-            $this->annuler($achat);
-
-            $achat->lignes()->delete();
-            $achat->delete();
-        });
-    }
-
-    /**
-     * Mettre à jour un achat
-     */
-    public function mettreAJour($achatId, array $data)
+    // =============================
+    // Annulation d'un achat
+    // =============================
+    public function annuler(int $achatId): void
     {
         $achat = Achat::findOrFail($achatId);
-        
-        $achat->update([
-            'date_achat' => $data['date_achat'] ?? $achat->date_achat,
-            'fournisseur_id' => $data['fournisseur_id'] ?? $achat->fournisseur_id,
-            'statut' => $data['statut'] ?? $achat->statut,
-            // Ajoutez d'autres champs selon votre besoin
-        ]);
-        
-        // Mettez à jour les lignes d'achat si nécessaire
-        if (isset($data['lignes'])) {
-            // Logique de mise à jour des lignes
-        }
-        
-        return $achat;
+        $achat->update(['statut' => 'annule']);
+    }
+
+    // =============================
+    // Suppression d'un achat
+    // =============================
+    public function supprimer(int $achatId): void
+    {
+        DB::transaction(function () use ($achatId) {
+            $achat = Achat::findOrFail($achatId);
+            $achat->lignes()->delete(); // Supprime les lignes
+            $achat->delete();            // Supprime l'achat
+        });
     }
 }

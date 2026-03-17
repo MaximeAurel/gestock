@@ -106,6 +106,8 @@ Swal.fire({
 </script>
 @endif
 
+@yield('scripts')
+
 </body>
 
 </html>

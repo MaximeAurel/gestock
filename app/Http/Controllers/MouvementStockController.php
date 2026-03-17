@@ -13,7 +13,7 @@ class MouvementStockController extends Controller
      */
     public function index()
     {
-        $mouvements = MouvementStock::latest()->paginate(15);
+        $mouvements = MouvementStock::with('produit')->latest()->get();
 
         return view('mouvement-stocks.index', compact('mouvements'));
     }

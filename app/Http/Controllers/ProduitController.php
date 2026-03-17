@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Produit;
+use App\Models\Stock;
 use App\Models\Categorie;
 use App\Models\Unite;
 use App\Http\Requests\ProduitRequest;
@@ -13,7 +14,10 @@ class ProduitController extends Controller
     public function index()
     {
         $produits = Produit::with(['categorie', 'unite'])->get();
-        return view('produits.index', compact('produits'));
+        $categories = Categorie::all();
+        $unites = Unite::all();
+
+        return view('produits.index', compact('produits', 'categories', 'unites'));
     }
 
     public function create()
@@ -26,12 +30,26 @@ class ProduitController extends Controller
     public function store(ProduitRequest $request)
     {
         try {
-            Produit::create($request->validated());
+            $validated = $request->validated();
+            $quantiteInitiale = $validated['quantite_initiale'] ?? 0;
+            unset($validated['quantite_initiale']);
+
+            // Force un stock minimum d'au moins 1
+            $validated['stock_min'] = max(1, $validated['stock_min']);
+
+            $produit = Produit::create($validated);
+
+            // Création du stock initial
+            Stock::create([
+                'produit_id'  => $produit->id,
+                'emplacement' => 'principal',
+                'quantite'    => $quantiteInitiale,
+            ]);
 
             return redirect()->route('produits.index')
-                ->with('success', 'Produit créé avec succès !');
+                ->with('success', 'Produit cree avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la création du produit.');
+            return back()->with('error', 'Erreur lors de la creation du produit.');
         }
     }
 
@@ -45,12 +63,28 @@ class ProduitController extends Controller
     public function update(ProduitRequest $request, Produit $produit)
     {
         try {
-            $produit->update($request->validated());
+            $validated = $request->validated();
+            $quantiteInitiale = $validated['quantite_initiale'] ?? null;
+            unset($validated['quantite_initiale']);
+
+            // Stock min au moins 1
+            $validated['stock_min'] = max(1, $validated['stock_min'] ?? $produit->stock_min);
+
+            $produit->update($validated);
+
+            // Ajustement de stock si fourni
+            if ($quantiteInitiale !== null) {
+                $stock = Stock::firstOrCreate(
+                    ['produit_id' => $produit->id],
+                    ['quantite' => 0, 'emplacement' => 'principal']
+                );
+                $stock->update(['quantite' => $quantiteInitiale]);
+            }
 
             return redirect()->route('produits.index')
-                ->with('success', 'Produit mis à jour avec succès !');
+                ->with('success', 'Produit mis a jour avec succes !');
         } catch (\Exception $e) {
-            return back()->with('error', 'Erreur lors de la mise à jour du produit.');
+            return back()->with('error', 'Erreur lors de la mise a jour du produit.');
         }
     }
 
@@ -60,7 +94,7 @@ class ProduitController extends Controller
             $produit->delete();
 
             return redirect()->route('produits.index')
-                ->with('success', 'Produit supprimé avec succès !');
+                ->with('success', 'Produit supprime avec succes !');
         } catch (\Exception $e) {
             return back()->with('error', 'Erreur lors de la suppression du produit.');
         }

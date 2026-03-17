@@ -11,7 +11,7 @@ class Produit extends Model
 
     protected $fillable = [
         'designation','code_barre','categorie_id','fournisseur_id','unite_id',
-        'prix_achat','prix_vente','stock_min','image','description','statut'
+        'prix_vente','stock_min','image','description','statut'
     ];
 
     public function categorie()

@@ -67,8 +67,7 @@ Route::middleware(['auth'])->group(function () {
 Route::resource('categories', CategoriesController::class);
 Route::resource('unites', UniteController::class);
 Route::resource('produits', ProduitController::class);
-Route::resource('stocks', StockController::class);
-Route::resource('mouvement-stocks', MouvementStockController::class);
+// Routes spécifiques déplacées plus bas (voir section Stocks)
 Route::get('rapports', [RapportController::class, 'index'])->name('rapports.index');
 
 
@@ -88,7 +87,15 @@ Route::resource('fournisseurs', FournisseurController::class);
 |--------------------------------------------------------------------------
 */
 
-Route::resource('achats', AchatController::class);
+Route::prefix('achats')->group(function () {
+    Route::get('/', [AchatController::class, 'index'])->name('achats.index');
+    Route::post('/', [AchatController::class, 'store'])->name('achats.store');
+    Route::get('/create', [AchatController::class, 'create'])->name('achats.create');
+    Route::get('/{achat}/edit', [AchatController::class, 'edit'])->name('achats.edit');
+    Route::match(['put','patch'],'/{achat}', [AchatController::class, 'update'])->name('achats.update');
+    Route::patch('/{achat}/annuler', [AchatController::class, 'annuler'])->name('achats.annuler'); // ← ici
+    Route::delete('/{achat}', [AchatController::class, 'destroy'])->name('achats.destroy');
+});
 
 
 /*
@@ -112,11 +119,19 @@ Route::resource('paiements', PaiementController::class);
 
 Route::resource('users', UserController::class);
 
+/*
+|--------------------------------------------------------------------------
+| Stocks
+|--------------------------------------------------------------------------
+*/
+Route::post('stocks/entree', [StockController::class, 'entree'])->name('stocks.entree');
+Route::post('stocks/sortie', [StockController::class, 'sortie'])->name('stocks.sortie');
+Route::delete('stocks/mouvements/{mouvement}', [StockController::class, 'annulerMouvement'])->name('stocks.annuler');
+Route::resource('stocks', StockController::class)->only(['index','show']);
+Route::resource('mouvement-stocks', MouvementStockController::class)->only(['index','show']);
+
 
 Route::get('parametres', [ParametreController::class, 'index'])->name('parametres.index');
 Route::post('parametres', [ParametreController::class, 'update'])->name('parametres.update');
 
 });
-
-
-

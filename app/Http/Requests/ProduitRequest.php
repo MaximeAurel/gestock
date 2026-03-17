@@ -13,15 +13,18 @@ class ProduitRequest extends FormRequest
 
     public function rules()
     {
-        $produitId = $this->route('produit') ?? null;
+        $produit = $this->route('produit');
+        $produitId = is_object($produit) ? $produit->id : $produit;
 
         return [
-            'nom' => 'required|string|max:100|unique:produits,nom,' . $produitId,
-            'categorie_id' => 'required|exists:categories,id',
-            'unite_id' => 'required|exists:unites,id',
-            'prix_achat' => 'required|numeric|min:0',
-            'prix_vente' => 'required|numeric|min:0',
-            'stock_min' => 'required|integer|min:0'
+            'designation'   => 'required|string|max:150|unique:produits,designation,' . $produitId,
+            'code_barre'    => 'nullable|string|max:100|unique:produits,code_barre,' . $produitId,
+            'categorie_id'  => 'required|exists:categories,id',
+            'unite_id'      => 'nullable|exists:unites,id',
+            'prix_vente'    => 'required|numeric|min:0',
+            'stock_min'     => 'required|integer|min:1',
+            'quantite_initiale' => 'nullable|integer|min:0',
+            'description'   => 'nullable|string',
         ];
     }
 }

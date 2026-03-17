@@ -16,7 +16,8 @@ class MouvementStockRequest extends FormRequest
         return [
             'produit_id' => 'required|exists:produits,id',
             'quantite' => 'required|integer|min:1',
-            'type' => 'required|in:entree,sortie',
+            // Le type est déduit par l'action (entrée/sortie) côté contrôleur
+            'type' => 'sometimes|in:entree,sortie',
             'motif' => 'nullable|string|max:255'
         ];
     }

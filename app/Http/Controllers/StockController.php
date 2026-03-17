@@ -19,8 +19,14 @@ class StockController extends Controller
 
     public function index()
     {
-        $mouvements = MouvementStock::with('produit')->latest()->get();
-        return view('stocks.index', compact('mouvements'));
+        $produits = Produit::with('stocks')
+            ->withSum('stocks as quantite', 'quantite')
+            ->orderBy('designation')
+            ->get();
+
+        $produitsCount = $produits->count();
+
+        return view('stocks.index', compact('produits', 'produitsCount'));
     }
 
     public function show(Produit $produit)
