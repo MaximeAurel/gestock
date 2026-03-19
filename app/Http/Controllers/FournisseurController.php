@@ -36,6 +36,12 @@ class FournisseurController extends Controller
         return view('fournisseurs.edit', compact('fournisseur'));
     }
 
+    public function show(Fournisseur $fournisseur)
+    {
+        $fournisseur->loadCount(['produits','achats']);
+        return view('fournisseurs.show', compact('fournisseur'));
+    }
+
     public function update(FournisseurRequest $request, Fournisseur $fournisseur)
     {
         try {

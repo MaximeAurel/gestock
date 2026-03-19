@@ -36,6 +36,12 @@ class UniteController extends Controller
         return view('unites.edit', compact('unite'));
     }
 
+    public function show(Unite $unite)
+    {
+        $unite->loadCount('produits');
+        return view('unites.show', compact('unite'));
+    }
+
     public function update(UniteRequest $request, Unite $unite)
     {
         try {

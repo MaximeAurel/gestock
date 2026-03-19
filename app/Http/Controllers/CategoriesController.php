@@ -36,6 +36,12 @@ class CategoriesController extends Controller
         return view('categories.edit', compact('categorie'));
     }
 
+    public function show(Categorie $categorie)
+    {
+        $categorie->loadCount('produits');
+        return view('categories.show', compact('categorie'));
+    }
+
     public function update(CategorieRequest $request, Categorie $categorie)
     {
         try {

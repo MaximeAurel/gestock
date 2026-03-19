@@ -52,9 +52,7 @@ Route::post('/logout', [AuthController::class,'logout'])->name('logout');
 */
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
 
 
@@ -69,6 +67,8 @@ Route::resource('unites', UniteController::class);
 Route::resource('produits', ProduitController::class);
 // Routes spécifiques déplacées plus bas (voir section Stocks)
 Route::get('rapports', [RapportController::class, 'index'])->name('rapports.index');
+Route::get('rapports/export/excel', [RapportController::class, 'exportExcel'])->name('rapports.export.excel');
+Route::get('rapports/export/pdf', [RapportController::class, 'exportPdf'])->name('rapports.export.pdf');
 
 
 /*
@@ -108,6 +108,15 @@ Route::resource('factures', FactureController::class);
 Route::resource('devis', DevisController::class);
 Route::resource('avoirs', AvoirController::class);
 Route::resource('paiements', PaiementController::class);
+Route::patch('factures/{facture}/payer', [FactureController::class,'payer'])->name('factures.payer');
+Route::patch('factures/{facture}/annuler', [FactureController::class,'annuler'])->name('factures.annuler');
+Route::get('factures/{facture}/export/pdf', [FactureController::class,'exportPdf'])->name('factures.export.pdf');
+Route::get('factures/{facture}/export/excel', [FactureController::class,'exportExcel'])->name('factures.export.excel');
+Route::patch('devis/{devi}/valider', [DevisController::class,'valider'])->name('devis.valider');
+Route::patch('devis/{devi}/annuler', [DevisController::class,'annuler'])->name('devis.annuler');
+Route::post('devis/{devi}/convertir', [DevisController::class,'convertirEnFacture'])->name('devis.convertir');
+Route::get('devis/{devi}/export/pdf', [DevisController::class,'exportPdf'])->name('devis.export.pdf');
+Route::get('devis/{devi}/export/excel', [DevisController::class,'exportExcel'])->name('devis.export.excel');
 
 
 
@@ -118,6 +127,7 @@ Route::resource('paiements', PaiementController::class);
 */
 
 Route::resource('users', UserController::class);
+Route::patch('users/{user}/role', [UserController::class, 'updateRole'])->name('users.updateRole');
 
 /*
 |--------------------------------------------------------------------------

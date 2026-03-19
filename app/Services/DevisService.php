@@ -17,6 +17,15 @@ class DevisService
     }
 
     /**
+     * Génère un numéro unique de devis (format DEV-00001).
+     */
+    protected function generateNumero(): string
+    {
+        $next = (Devis::max('id') ?? 0) + 1;
+        return 'DEV-' . str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Création d'un devis
      */
     public function creer(array $data): Devis
@@ -27,9 +36,11 @@ class DevisService
             $totalTVA = 0;
 
             $devis = Devis::create([
+                'numero' => $data['numero'] ?? $this->generateNumero(),
                 'client_id' => $data['client_id'],
                 'date_devis' => $data['date_devis'],
-                'date_expiration' => $data['date_expiration'],
+                // Utilise la date d'expiration fournie ou, par défaut, 30 jours après la date du devis
+                'date_expiration' => $data['date_expiration'] ?? now()->addDays(30),
                 'statut' => 'brouillon',
                 'total_ht' => 0,
                 'total_tva' => 0,
@@ -39,13 +50,14 @@ class DevisService
             foreach ($data['lignes'] as $ligne)
             {
                 $montantHT = $ligne['quantite'] * $ligne['prix_unitaire'];
-                $montantTVA = $montantHT * ($ligne['tva'] / 100);
+                $tva = $ligne['tva'] ?? 0;
+                $montantTVA = $montantHT * ($tva / 100);
 
                 $devis->lignes()->create([
                     'produit_id' => $ligne['produit_id'],
                     'quantite' => $ligne['quantite'],
                     'prix_unitaire' => $ligne['prix_unitaire'],
-                    'tva' => $ligne['tva'],
+                    'tva' => $tva,
                     'total' => $montantHT + $montantTVA
                 ]);
 
@@ -60,6 +72,52 @@ class DevisService
             ]);
 
             return $devis;
+        });
+    }
+
+    /**
+     * Mise à jour d'un devis existant
+     */
+    public function mettreAJour(Devis $devis, array $data): Devis
+    {
+        return DB::transaction(function () use ($devis, $data)
+        {
+            $totalHT = 0;
+            $totalTVA = 0;
+
+            $devis->update([
+                'client_id' => $data['client_id'],
+                'date_devis' => $data['date_devis'],
+                'date_expiration' => $data['date_expiration'] ?? now()->addDays(30),
+            ]);
+
+            $devis->lignes()->delete();
+
+            foreach ($data['lignes'] as $ligne)
+            {
+                $montantHT = $ligne['quantite'] * $ligne['prix_unitaire'];
+                $tva = $ligne['tva'] ?? 0;
+                $montantTVA = $montantHT * ($tva / 100);
+
+                $devis->lignes()->create([
+                    'produit_id' => $ligne['produit_id'],
+                    'quantite' => $ligne['quantite'],
+                    'prix_unitaire' => $ligne['prix_unitaire'],
+                    'tva' => $tva,
+                    'total' => $montantHT + $montantTVA
+                ]);
+
+                $totalHT += $montantHT;
+                $totalTVA += $montantTVA;
+            }
+
+            $devis->update([
+                'total_ht' => $totalHT,
+                'total_tva' => $totalTVA,
+                'total_ttc' => $totalHT + $totalTVA
+            ]);
+
+            return $devis->fresh('lignes.produit', 'client');
         });
     }
 

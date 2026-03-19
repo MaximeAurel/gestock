@@ -10,7 +10,7 @@
   <meta content="" name="keywords">
 
   <!-- Favicons -->
-  <link href="{{ asset('assets/img/apple-touch-icon.png') }}" rel="apple-touch-icon">
+  <link href="{{ asset('assets/img/logo.png') }}" rel="apple-touch-icon">
 
   <!-- Google Fonts -->
   <link href="https://fonts.gstatic.com" rel="preconnect">
@@ -89,9 +89,9 @@
 <script>
 Swal.fire({
     icon: 'success',
-    title: 'Connexion réussie',
-    text: 'Bienvenue {{ session("user_name") }} ({{ session("user_role") }})',
-    confirmButtonText: 'Continuer'
+    title: "{{ session('title') ?? 'Succès' }}",
+    text: "{{ session('success') }}",
+    confirmButtonText: 'OK'
 });
 </script>
 @endif

@@ -85,15 +85,6 @@
         padding:40px;
     }
 
-    .toggle-password{
-        position:absolute;
-        top:50%;
-        right:15px;
-        transform:translateY(-50%);
-        cursor:pointer;
-        color:#6c757d;
-    }
-
     @media(max-width:992px){
         .auth-right{display:none;}
     }
@@ -108,6 +99,7 @@
     color:#6c757d;
     font-size:18px;
     transition:0.2s;
+    line-height:1;
 }
 
 .toggle-password:hover{
@@ -141,10 +133,12 @@
                     <input type="email" name="email" class="form-control" required>
                 </div>
 
-                <div class="mb-3 position-relative">
-                    <label class="form-label">Mot de passe</label>
-                    <input type="password" name="password" id="password" class="form-control" required>
-                    <i class="bi bi-eye toggle-password" onclick="togglePassword()"></i>
+                <div class="mb-3">
+                    <label class="form-label" for="password">Mot de passe</label>
+                    <div class="position-relative">
+                        <input type="password" name="password" id="password" class="form-control pe-5" required>
+                        <i class="bi bi-eye toggle-password" onclick="togglePassword()"></i>
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-between mb-4">

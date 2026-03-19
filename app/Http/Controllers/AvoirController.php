@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Avoir;
 use App\Models\Facture;
 use App\Http\Requests\AvoirRequest;
-use Illuminate\Http\Requests;
+use Illuminate\Support\Facades\Auth;
 
 class AvoirController extends Controller
 {
     public function index()
     {
         $avoirs = Avoir::with('facture.client')->latest()->get();
-        return view('avoirs.index', compact('avoirs'));
+        $factures = Facture::with('client')->orderByDesc('created_at')->get();
+        return view('avoirs.index', compact('avoirs', 'factures'));
     }
 
     public function create()
@@ -24,11 +25,23 @@ class AvoirController extends Controller
     public function store(AvoirRequest $request)
     {
         try {
-            $avoir = Avoir::create($request->validated());
+            $validated = $request->validated();
+
+            if (empty($validated['numero'])) {
+                $lastId = Avoir::max('id') ?? 0;
+                $validated['numero'] = 'AV-' . str_pad($lastId + 1, 5, '0', STR_PAD_LEFT);
+            }
+
+            $facture = Facture::findOrFail($validated['facture_id']);
+            $isAdmin = in_array(strtolower(Auth::user()->role->nom ?? ''), ['admin', 'administrateur'], true);
+            if (!$isAdmin) {
+                $validated['montant'] = $facture->total_ttc ?? 0;
+            }
+
+            $avoir = Avoir::create($validated);
 
             // Met à jour le solde de la facture
-            $facture = Facture::find($request->facture_id);
-            $facture->solde -= $request->montant;
+            $facture->solde -= $validated['montant'];
             $facture->save();
 
             return redirect()->route('avoirs.index')
@@ -52,11 +65,21 @@ class AvoirController extends Controller
             $ancienneFacture->solde += $avoir->montant;
             $ancienneFacture->save();
 
-            $avoir->update($request->validated());
+            $validated = $request->validated();
+            if (empty($validated['numero'])) {
+                $validated['numero'] = $avoir->numero;
+            }
+
+            $facture = Facture::findOrFail($validated['facture_id']);
+            $isAdmin = in_array(strtolower(Auth::user()->role->nom ?? ''), ['admin', 'administrateur'], true);
+            if (!$isAdmin) {
+                $validated['montant'] = $facture->total_ttc ?? 0;
+            }
+
+            $avoir->update($validated);
 
             // Met à jour le solde de la nouvelle facture
-            $facture = Facture::find($request->facture_id);
-            $facture->solde -= $request->montant;
+            $facture->solde -= $validated['montant'];
             $facture->save();
 
             return redirect()->route('avoirs.index')

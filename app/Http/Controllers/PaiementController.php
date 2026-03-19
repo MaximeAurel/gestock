@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Paiement;
 use App\Models\Facture;
 use App\Http\Requests\PaiementRequest;
-use Illuminate\Http\Requests;
 
 class PaiementController extends Controller
 {
     public function index()
     {
         $paiements = Paiement::with('facture.client')->latest()->get();
-        return view('paiements.index', compact('paiements'));
+        $factures = Facture::with('client')->orderByDesc('created_at')->get();
+        return view('paiements.index', compact('paiements', 'factures'));
     }
 
     public function create()
@@ -24,11 +24,14 @@ class PaiementController extends Controller
     public function store(PaiementRequest $request)
     {
         try {
-            $paiement = Paiement::create($request->validated());
+            $data = $request->validated();
+            $paiement = Paiement::create($data);
 
-            // Met à jour le solde de la facture
-            $facture = Facture::find($request->facture_id);
-            $facture->solde = $facture->solde - $request->montant;
+            // Mise à jour facture
+            $facture = Facture::findOrFail($data['facture_id']);
+            $facture->montant_paye = ($facture->montant_paye ?? 0) + $data['montant'];
+            $facture->reste_a_payer = max(0, ($facture->reste_a_payer ?? $facture->total_ttc ?? 0) - $data['montant']);
+            $facture->solde = $facture->reste_a_payer;
             $facture->save();
 
             return redirect()->route('paiements.index')
@@ -47,16 +50,24 @@ class PaiementController extends Controller
     public function update(PaiementRequest $request, Paiement $paiement)
     {
         try {
-            // Restaure le solde de l'ancienne facture
-            $ancienneFacture = Facture::find($paiement->facture_id);
-            $ancienneFacture->solde += $paiement->montant;
-            $ancienneFacture->save();
+            $data = $request->validated();
 
-            $paiement->update($request->validated());
+            // Restaurer ancienne facture
+            $oldFacture = Facture::find($paiement->facture_id);
+            if ($oldFacture) {
+                $oldFacture->montant_paye = max(0, ($oldFacture->montant_paye ?? 0) - $paiement->montant);
+                $oldFacture->reste_a_payer = ($oldFacture->reste_a_payer ?? $oldFacture->total_ttc ?? 0) + $paiement->montant;
+                $oldFacture->solde = $oldFacture->reste_a_payer;
+                $oldFacture->save();
+            }
 
-            // Déduit le montant de la nouvelle facture
-            $facture = Facture::find($request->facture_id);
-            $facture->solde -= $request->montant;
+            $paiement->update($data);
+
+            // Appliquer sur la nouvelle facture
+            $facture = Facture::findOrFail($data['facture_id']);
+            $facture->montant_paye = ($facture->montant_paye ?? 0) + $data['montant'];
+            $facture->reste_a_payer = max(0, ($facture->reste_a_payer ?? $facture->total_ttc ?? 0) - $data['montant']);
+            $facture->solde = $facture->reste_a_payer;
             $facture->save();
 
             return redirect()->route('paiements.index')
@@ -69,10 +80,13 @@ class PaiementController extends Controller
     public function destroy(Paiement $paiement)
     {
         try {
-            // Restaure le solde de la facture
             $facture = Facture::find($paiement->facture_id);
-            $facture->solde += $paiement->montant;
-            $facture->save();
+            if ($facture) {
+                $facture->montant_paye = max(0, ($facture->montant_paye ?? 0) - $paiement->montant);
+                $facture->reste_a_payer = ($facture->reste_a_payer ?? $facture->total_ttc ?? 0) + $paiement->montant;
+                $facture->solde = $facture->reste_a_payer;
+                $facture->save();
+            }
 
             $paiement->delete();
 

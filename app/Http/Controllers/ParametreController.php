@@ -3,23 +3,28 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Parametre;
+use Illuminate\Support\Facades\Storage;
 
 class ParametreController extends Controller
 {
     /**
      * Affiche la page principale des paramètres
-     * 
-     * Les paramètres sont généralement stockés dans la base ou un fichier config.
      */
     public function index()
     {
-        // Exemple : récupérer des paramètres depuis un service ou config
-        $parametres = [
+        $defaults = [
             'nom_entreprise' => config('app.name', 'Gestock'),
             'devise' => 'XAF',
             'tva' => 18,
-            'logo' => '/images/logo.png'
+            'logo' => null,
         ];
+
+        $stored = Parametre::whereIn('cle', array_keys($defaults))
+            ->pluck('valeur', 'cle')
+            ->toArray();
+
+        $parametres = array_merge($defaults, $stored);
 
         return view('parametres.index', compact('parametres'));
     }
@@ -36,11 +41,16 @@ class ParametreController extends Controller
             'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-        // Exemple de mise à jour : ici tu peux soit sauvegarder en base, soit dans un fichier config
-        // Si tu as une table 'parametres', tu pourrais faire :
-        // foreach ($request->only(['nom_entreprise','devise','tva','logo']) as $key => $value) {
-        //     Parametre::updateOrCreate(['key' => $key], ['value' => $value]);
-        // }
+        $data = $request->only(['nom_entreprise', 'devise', 'tva']);
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('logos', 'public');
+            $data['logo'] = Storage::url($path);
+        }
+
+        foreach ($data as $key => $value) {
+            Parametre::updateOrCreate(['cle' => $key], ['valeur' => $value]);
+        }
 
         return redirect()->route('parametres.index')
             ->with('success', 'Paramètres mis à jour avec succès !');

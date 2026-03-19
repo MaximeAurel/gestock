@@ -10,10 +10,21 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+    private function ensureAdmin(): void
+    {
+        $roleName = strtolower(trim(auth()->user()?->role?->nom ?? ''));
+        $isAdmin = in_array($roleName, ['admin', 'administrateur'], true);
+        abort_if(!$isAdmin, 403, 'Acces refuse');
+    }
+
     public function index()
     {
+        $this->ensureAdmin();
         $users = User::with('role')->get();
-        return view('users.index', compact('users'));
+        $roles = Role::all();
+        $adminRoleId = auth()->user()->role_id;
+
+        return view('users.index', compact('users', 'roles', 'adminRoleId'));
     }
 
     public function show(User $user)
@@ -33,18 +44,20 @@ class UserController extends Controller
 
     public function create()
     {
+        $this->ensureAdmin();
         $roles = Role::all();
         return view('users.create', compact('roles'));
     }
 
     public function store(UserRequest $request)
     {
+        $this->ensureAdmin();
         try {
             User::create([
                 'nom' => $request->nom,
                 'email' => $request->email,
                 'role_id' => $request->role_id,
-                'mot_de_passe' => Hash::make($request->mot_de_passe)
+                'password' => Hash::make($request->password)
             ]);
 
             return redirect()->route('users.index')
@@ -56,18 +69,20 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
+        $this->ensureAdmin();
         $roles = Role::all();
         return view('users.edit', compact('user', 'roles'));
     }
 
     public function update(UserRequest $request, User $user)
     {
+        $this->ensureAdmin();
         try {
             $user->update([
                 'nom' => $request->nom,
                 'email' => $request->email,
                 'role_id' => $request->role_id,
-                'mot_de_passe' => $request->mot_de_passe ? Hash::make($request->mot_de_passe) : $user->mot_de_passe
+                'password' => $request->password ? Hash::make($request->password) : $user->password
             ]);
 
             return redirect()->route('users.index')
@@ -79,6 +94,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->ensureAdmin();
         try {
             $user->delete();
             return redirect()->route('users.index')
@@ -93,13 +109,14 @@ class UserController extends Controller
      */
     public function changerMotDePasse(Request $request, User $user)
     {
+        $this->ensureAdmin();
         $request->validate([
-            'mot_de_passe' => 'required|string|min:6|confirmed'
+            'password' => 'required|string|min:6|confirmed'
         ]);
 
         try {
             $user->update([
-                'mot_de_passe' => Hash::make($request->mot_de_passe)
+                'password' => Hash::make($request->password)
             ]);
 
             return redirect()->route('users.index')
@@ -107,5 +124,23 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Erreur lors de la mise a jour du mot de passe.');
         }
+    }
+
+    public function updateRole(Request $request, User $user)
+    {
+        $this->ensureAdmin();
+
+        // Interdiction de modifier un utilisateur du même rôle (ex : autre admin)
+        if ($user->role_id === auth()->user()->role_id) {
+            abort(403, "Vous ne pouvez pas modifier un utilisateur ayant le même rôle.");
+        }
+
+        $data = $request->validate([
+            'role_id' => 'required|exists:roles,id',
+        ]);
+
+        $user->update(['role_id' => $data['role_id']]);
+
+        return back()->with('success', 'Rôle mis à jour avec succès.');
     }
 }

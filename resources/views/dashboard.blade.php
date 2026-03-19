@@ -44,8 +44,11 @@
                       <i class="bi bi-cart"></i>
                     </div>
                     <div class="ps-3">
-                      <h6>145</h6>
-                      <span class="text-success small pt-1 fw-bold">12%</span> <span class="text-muted small pt-2 ps-1">increase</span>
+                      <h6>{{ $salesToday ?? 0 }}</h6>
+                      <span class="{{ ($salesChange ?? 0) >=0 ? 'text-success':'text-danger' }} small pt-1 fw-bold">
+                        {{ number_format($salesChange ?? 0, 0) }}%
+                      </span>
+                      <span class="text-muted small pt-2 ps-1">change</span>
 
                     </div>
                   </div>
@@ -79,8 +82,10 @@
                       <i class="bi bi-currency-dollar"></i>
                     </div>
                     <div class="ps-3">
-                      <h6>$3,264</h6>
-                      <span class="text-success small pt-1 fw-bold">8%</span> <span class="text-muted small pt-2 ps-1">increase</span>
+                      <h6>{{ number_format($revenueMonth ?? 0,0,',',' ') }} FCFA</h6>
+                      <span class="{{ ($revenueChange ?? 0) >=0 ? 'text-success':'text-danger' }} small pt-1 fw-bold">
+                        {{ number_format($revenueChange ?? 0,0) }}%
+                      </span> <span class="text-muted small pt-2 ps-1">change</span>
 
                     </div>
                   </div>
@@ -115,8 +120,10 @@
                       <i class="bi bi-people"></i>
                     </div>
                     <div class="ps-3">
-                      <h6>1244</h6>
-                      <span class="text-danger small pt-1 fw-bold">12%</span> <span class="text-muted small pt-2 ps-1">decrease</span>
+                      <h6>{{ $customersYear ?? 0 }}</h6>
+                      <span class="{{ ($customersChange ?? 0) >=0 ? 'text-success':'text-danger' }} small pt-1 fw-bold">
+                        {{ number_format($customersChange ?? 0,0) }}%
+                      </span> <span class="text-muted small pt-2 ps-1">change</span>
 
                     </div>
                   </div>
@@ -154,13 +161,13 @@
                       new ApexCharts(document.querySelector("#reportsChart"), {
                         series: [{
                           name: 'Sales',
-                          data: [31, 40, 28, 51, 42, 82, 56],
+                          data: @json($salesSeries ?? [])
                         }, {
                           name: 'Revenue',
-                          data: [11, 32, 45, 32, 34, 52, 41]
+                          data: @json($revenueSeries ?? [])
                         }, {
                           name: 'Customers',
-                          data: [15, 11, 32, 18, 9, 24, 11]
+                          data: @json($customersSeries ?? [])
                         }],
                         chart: {
                           height: 350,
@@ -174,7 +181,7 @@
                         },
                         colors: ['#4154f1', '#2eca6a', '#ff771d'],
                         fill: {
-                          type: "gradient",
+                          type: \"gradient\",
                           gradient: {
                             shadeIntensity: 1,
                             opacityFrom: 0.3,
@@ -191,11 +198,11 @@
                         },
                         xaxis: {
                           type: 'datetime',
-                          categories: ["2018-09-19T00:00:00.000Z", "2018-09-19T01:30:00.000Z", "2018-09-19T02:30:00.000Z", "2018-09-19T03:30:00.000Z", "2018-09-19T04:30:00.000Z", "2018-09-19T05:30:00.000Z", "2018-09-19T06:30:00.000Z"]
+                          categories: @json($chartCategories ?? [])
                         },
                         tooltip: {
                           x: {
-                            format: 'dd/MM/yy HH:mm'
+                            format: 'yyyy-MM-dd'
                           },
                         }
                       }).render();
@@ -233,55 +240,20 @@
               <h5 class="card-title">Recent Activity <span>| Today</span></h5>
 
               <div class="activity">
-
+                @forelse($activities ?? [] as $act)
                 <div class="activity-item d-flex">
-                  <div class="activite-label">32 min</div>
+                  <div class="activite-label">{{ optional($act->created_at)->diffForHumans() ?? '—' }}</div>
                   <i class='bi bi-circle-fill activity-badge text-success align-self-start'></i>
                   <div class="activity-content">
-                    Quia quae rerum <a href="#" class="fw-bold text-dark">explicabo officiis</a> beatae
+                    Paiement {{ number_format($act->montant,0,',',' ') }} FCFA pour facture {{ optional($act->facture)->numero ?? '—' }} ({{ optional(optional($act->facture)->client)->nom ?? '—' }})
                   </div>
-                </div><!-- End activity item-->
-
+                </div>
+                @empty
                 <div class="activity-item d-flex">
-                  <div class="activite-label">56 min</div>
-                  <i class='bi bi-circle-fill activity-badge text-danger align-self-start'></i>
-                  <div class="activity-content">
-                    Voluptatem blanditiis blanditiis eveniet
-                  </div>
-                </div><!-- End activity item-->
-
-                <div class="activity-item d-flex">
-                  <div class="activite-label">2 hrs</div>
-                  <i class='bi bi-circle-fill activity-badge text-primary align-self-start'></i>
-                  <div class="activity-content">
-                    Voluptates corrupti molestias voluptatem
-                  </div>
-                </div><!-- End activity item-->
-
-                <div class="activity-item d-flex">
-                  <div class="activite-label">1 day</div>
-                  <i class='bi bi-circle-fill activity-badge text-info align-self-start'></i>
-                  <div class="activity-content">
-                    Tempore autem saepe <a href="#" class="fw-bold text-dark">occaecati voluptatem</a> tempore
-                  </div>
-                </div><!-- End activity item-->
-
-                <div class="activity-item d-flex">
-                  <div class="activite-label">2 days</div>
-                  <i class='bi bi-circle-fill activity-badge text-warning align-self-start'></i>
-                  <div class="activity-content">
-                    Est sit eum reiciendis exercitationem
-                  </div>
-                </div><!-- End activity item-->
-
-                <div class="activity-item d-flex">
-                  <div class="activite-label">4 weeks</div>
-                  <i class='bi bi-circle-fill activity-badge text-muted align-self-start'></i>
-                  <div class="activity-content">
-                    Dicta dolorem harum nulla eius. Ut quidem quidem sit quas
-                  </div>
-                </div><!-- End activity item-->
-
+                  <div class="activite-label">—</div>
+                  <div class="activity-content text-muted">Aucune activité récente</div>
+                </div>
+                @endforelse
               </div>
 
             </div>
@@ -314,42 +286,20 @@
                       data: ['Allocated Budget', 'Actual Spending']
                     },
                     radar: {
-                      // shape: 'circle',
-                      indicator: [{
-                          name: 'Sales',
-                          max: 6500
-                        },
-                        {
-                          name: 'Administration',
-                          max: 16000
-                        },
-                        {
-                          name: 'Information Technology',
-                          max: 30000
-                        },
-                        {
-                          name: 'Customer Support',
-                          max: 38000
-                        },
-                        {
-                          name: 'Development',
-                          max: 52000
-                        },
-                        {
-                          name: 'Marketing',
-                          max: 25000
-                        }
+                      indicator: [
+                        { name: 'Ventes', max: Math.max({{ $allocated ?? 0 }}, {{ $actual ?? 0 }}) || 1000 },
+                        { name: 'Achats', max: Math.max({{ $allocated ?? 0 }}, {{ $actual ?? 0 }}) || 1000 }
                       ]
                     },
                     series: [{
                       name: 'Budget vs spending',
                       type: 'radar',
                       data: [{
-                          value: [4200, 3000, 20000, 35000, 50000, 18000],
+                          value: [{{ $allocated ?? 0 }}, {{ $allocated ?? 0 }}],
                           name: 'Allocated Budget'
                         },
                         {
-                          value: [5000, 14000, 28000, 26000, 42000, 21000],
+                          value: [{{ $actual ?? 0 }}, {{ $actual ?? 0 }}],
                           name: 'Actual Spending'
                         }
                       ]

@@ -10,7 +10,7 @@ class Facture extends Model
     use HasFactory;
 
     protected $fillable = [
-        'numero','client_id','date_facture','total_ht','total_tva','total_ttc','statut'
+        'numero','client_id','date_facture','total_ht','total_tva','total_ttc','montant_paye','reste_a_payer','solde','statut'
     ];
 
     public function client()

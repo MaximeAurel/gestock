@@ -19,7 +19,8 @@ class FactureRequest extends FormRequest
             'lignes' => 'required|array|min:1',
             'lignes.*.produit_id' => 'required|exists:produits,id',
             'lignes.*.quantite' => 'required|integer|min:1',
-            'lignes.*.prix_unitaire' => 'required|numeric|min:0'
+            'lignes.*.prix_unitaire' => 'required|numeric|min:0',
+            'lignes.*.tva' => 'required|numeric|min:0'
         ];
     }
 }
